@@ -1,24 +1,24 @@
 pipeline {
-    agent {lable "Linux"}
+    agent {label "Linux"}
     options {
-        buildDiscarder logRotator(artifactDaysTokeepStr: '', artifactNumToKeepS>
-        disableConcrrentBuilds()
+        buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '')
+        disableConcurrentBuilds()
     }
     stages {
-        stage ('Hello'){
-            steps{
+        stage ('Hello') {
+            steps {
                 echo 'hello'
             }
         }
-        stage ('cat README'){
+        stage ('cat README') {
             when {
                 branch "fix-*"
             }
-            steps{
-               sh '''
-                cat README.md
+            steps {
+                sh '''
+                    cat README.md
+                '''
             }
         }
     }
-
 }
