@@ -1,24 +1,24 @@
 pipeline {
-    agent any
+    agent {lable "Linux"}
+    options {
+        buildDiscarder logRotator(artifactDaysTokeepStr: '', artifactNumToKeepS>
+        disableConcrrentBuilds()
+    }
     stages {
-        stage ("build"){
+        stage ('Hello'){
             steps{
-                echo 'building the application...'
+                echo 'hello'
+            }
+        }
+        stage ('cat README'){
+            when {
+                branch "fix-*"
+            }
+            steps{
+               sh '''
+                cat README.md
             }
         }
     }
-    stages {
-        stage ("test"){
-            steps{
-               echo 'testing the application...' 
-            }
-        }
-    }
-    stages {
-        stage ("deploy"){
-            steps{
-                echo 'deploying the application...'
-            }
-        }
-    }
+
 }
