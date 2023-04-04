@@ -1,29 +1,55 @@
 pipeline {
-  agent any
-  stages {
-    stage('for main branch'){
-      when {
-        branch 'main'
-      }
-      steps {
-        echo 'main branch'
-      }
+    agent any
+    environment {
+        MAVEN_HOME = tool 'Maven'
     }
-    stage('for stage branch'){
-      when {
-        branch 'stage'
-      }
-      steps {
-        echo 'stage branch'
-      }
+    options {
+        timeout(time: 1, unit: 'HOURS')
     }
-    stage('for pull request'){
-      when {
-        changeRequest()
-      }
-      steps {
-        echo 'pull request'
-      }
-    }  
-  }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'git-creds', url: 'https://github.com/myorg/myrepo.git']]])
+            }
+        }
+        stage('Build') {
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn clean install -DskipTests"
+            }
+        }
+        stage('Test') {
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn test"
+            }
+        }
+        stage('Package') {
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn package"
+            }
+        }
+        stage('Deploy to Staging') {
+            when {
+                branch 'develop'
+            }
+            environment {
+                SERVER_URL = "https://staging.myapp.com"
+                SERVER_CREDENTIALS = credentials('staging-creds')
+            }
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn deploy -DskipTests -Dserver.url=${SERVER_URL} -Dserver.username=${SERVER_CREDENTIALS_USR} -Dserver.password=${SERVER_CREDENTIALS_PSW}"
+            }
+        }
+        stage('Deploy to Production') {
+            when {
+                branch 'main'
+            }
+            environment {
+                SERVER_URL = "https://prod.myapp.com"
+                SERVER_CREDENTIALS = credentials('prod-creds')
+            }
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn deploy -DskipTests -Dserver.url=${SERVER_URL} -Dserver.username=${SERVER_CREDENTIALS_USR} -Dserver.password=${SERVER_CREDENTIALS_PSW}"
+            }
+        }
+    }
 }
