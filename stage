@@ -1,29 +1,55 @@
 pipeline {
-  agent any
-  stages {
-    stage('for main branch'){
-      when {
-        branch 'main'
-      }
-      steps {
-        echo 'main branch'
-      }
+    agent any // The pipeline can run on any available agent (node) in the Jenkins environment
+    environment { // Define environment variables that can be used across stages
+        MAVEN_HOME = tool 'Maven' // Set the Maven home directory to the 'Maven' tool
     }
-    stage('for stage branch'){
-      when {
-        branch 'stage'
-      }
-      steps {
-        echo 'stage branch'
-      }
+    options { // Define pipeline options
+        timeout(time: 1, unit: 'HOURS') // Set the pipeline timeout to 1 hour
     }
-    stage('for pull request'){
-      when {
-        changeRequest()
-      }
-      steps {
-        echo 'pull request'
-      }
-    }  
-  }
+    stages { // The different stages of the pipeline
+        stage('Checkout') { // The first stage, to checkout the code from version control
+            steps {
+                checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'git-creds', url: 'https://github.com/myorg/myrepo.git']]]) // Checkout the code from the main branch of the repository 'myorg/myrepo' using Git and the credentials 'git-creds'
+            }
+        }
+        stage('Build') { // The second stage, to build the code
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn clean install -DskipTests" // Build the code using Maven, skipping tests
+            }
+        }
+        stage('Test') { // The third stage, to run tests
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn test" // Run unit tests using Maven
+            }
+        }
+        stage('Package') { // The fourth stage, to package the application
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn package" // Package the built artifact using Maven
+            }
+        }
+        stage('Deploy to Staging') { // The fifth stage, to deploy the application to staging environment
+            when {
+                branch 'develop' // Only run this stage if the branch being built is 'develop'
+            }
+            environment { // Define environment variables specific to this stage
+                SERVER_URL = "https://staging.myapp.com" // Set the staging server URL
+                SERVER_CREDENTIALS = credentials('staging-creds') // Set the credentials to authenticate with the staging server
+            }
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn deploy -DskipTests -Dserver.url=${SERVER_URL} -Dserver.username=${SERVER_CREDENTIALS_USR} -Dserver.password=${SERVER_CREDENTIALS_PSW}" // Deploy the built artifact to the staging server using Maven, passing in server URL and credentials as Maven properties
+            }
+        }
+        stage('Deploy to Production') { // The sixth stage, to deploy the application to production environment
+            when {
+                branch 'main' // Only run this stage if the branch being built is 'main'
+            }
+            environment { // Define environment variables specific to this stage
+                SERVER_URL = "https://prod.myapp.com" // Set the production server URL
+                SERVER_CREDENTIALS = credentials('prod-creds') // Set the credentials to authenticate with the production server
+            }
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn deploy -DskipTests -Dserver.url=${SERVER_URL} -Dserver.username=${SERVER_CREDENTIALS_USR} -Dserver.password=${SERVER_CREDENTIALS_PSW}" // Deploy the built artifact to the production server using Maven, passing in server URL and credentials as Maven properties
+            }
+        }
+    }
 }
