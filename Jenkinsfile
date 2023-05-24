@@ -1,9 +1,9 @@
 pipeline {
-    agent { 
+    agent {
         node {
             label 'docker-agent-python'
-            }
-      }
+        }
+    }
     triggers {
         pollSCM '* * * * *'
     }
@@ -37,4 +37,3 @@ pipeline {
         }
     }
 }
-
